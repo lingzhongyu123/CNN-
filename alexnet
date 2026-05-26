@@ -1,0 +1,59 @@
+import torch
+import torch.nn as nn
+
+class AlexNet(nn.Module):
+    def __init__(self, num_classes=1000):
+        super(AlexNet, self).__init__()
+        # 1. 特征提取部分（卷积+激活+池化）
+        self.features = nn.Sequential(
+            # 第一层：输入3通道（RGB），输出64个特征图，卷积核11x11，步长4，填充2
+            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2), # 最大池化
+            
+            # 第二层
+            nn.Conv2d(64, 192, kernel_size=5, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            
+            # 第三层
+            nn.Conv2d(192, 384, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            
+            # 第四层
+            nn.Conv2d(384, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            
+            # 第五层
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+        )
+        
+        # 2. 分类器部分（全连接层）
+        self.classifier = nn.Sequential(
+            nn.Dropout(p=0.5), # 随机失活，防止过拟合
+            nn.Linear(256 * 6 * 6, 4096), # 把三维特征图展平为一维向量
+            nn.ReLU(inplace=True),
+            
+            nn.Dropout(p=0.5),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            
+            nn.Linear(4096, num_classes), # 最终输出1000类
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = torch.flatten(x, start_dim=1) # 把特征图展平：(batch, 256, 6, 6) -> (batch, 256*6*6)
+        x = self.classifier(x)
+        return x
+
+# 【验证网络是否跑通】
+if __name__ == "__main__":
+    # 模拟输入：1张 3通道（RGB）、大小为 224x224 的假图片
+    mock_input = torch.randn(1, 3, 224, 224)
+    model = AlexNet(num_classes=1000)
+    output = model(mock_input)
+    print("输入尺寸:", mock_input.shape)
+    print("输出尺寸（应为 1x1000）:", output.shape)
